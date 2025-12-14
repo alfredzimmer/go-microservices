@@ -102,6 +102,7 @@ func (r *postgresRepository) GetOrdersForAccount(ctx context.Context, accountId 
 		if err = rows.Scan(
 			&order.Id,
 			&order.CreatedAt,
+			&order.AccountId,
 			&order.TotalPrice,
 			&orderedProduct.Id,
 			&orderedProduct.Quantity,

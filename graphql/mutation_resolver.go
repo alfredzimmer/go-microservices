@@ -58,7 +58,22 @@ func (r *mutationResolver) CreateOrder(ctx context.Context, in OrderInput) (*Ord
 		if p.Quantity <= 0 {
 			return nil, ErrInvalidParameter
 		}
+
+		productDetails, err := r.server.catalogClient.GetProduct(ctx, p.ID)
+		if err != nil {
+			log.Println("Error fetching product: ", err)
+			return nil, err
+		}
+
+		products = append(products, order.OrderedProduct{
+			Id: productDetails.Id,
+			Name: productDetails.Name,
+			Description: productDetails.Description,
+			Price: productDetails.Price,
+			Quantity: uint32(p.Quantity),
+		})
 	}
+
 	o, err := r.server.orderClient.PostOrder(ctx, in.AccountID, products)
 	if err != nil {
 		log.Println(err)
