@@ -26,7 +26,7 @@ type elasticRepository struct {
 
 type ProductDocument struct {
 	Name        string  `json:"name"`
-	Description string  `json:"descrption"`
+	Description string  `json:"description"`
 	Price       float64 `json:"price"`
 }
 
@@ -66,7 +66,7 @@ func (r *elasticRepository) GetProductById(ctx context.Context, id string) (*Pro
 		return nil, ErrnotFound
 	}
 	p := ProductDocument{}
-	if err = json.Unmarshal(*&res.Source, &p); err != nil {
+	if err = json.Unmarshal(res.Source, &p); err != nil {
 		return nil, err
 	}
 	return &Product{
@@ -87,7 +87,7 @@ func (r *elasticRepository) ListProducts(ctx context.Context, skip uint64, take 
 	products := []Product{}
 	for _, hit := range res.Hits.Hits {
 		p := ProductDocument{}
-		if err = json.Unmarshal(*&hit.Source, &p); err == nil {
+		if err = json.Unmarshal(hit.Source, &p); err == nil {
 			products = append(products, Product{
 				Id:          hit.Id,
 				Name:        p.Name,
@@ -119,7 +119,7 @@ func (r *elasticRepository) ListProductsWithIds(ctx context.Context, ids []strin
 
 	for _, doc := range res.Docs {
 		p := ProductDocument{}
-		if err = json.Unmarshal(*&doc.Source, &p); err == nil {
+		if err = json.Unmarshal(doc.Source, &p); err == nil {
 			products = append(products, Product{
 				Id:          doc.Id,
 				Name:        p.Name,
@@ -145,7 +145,7 @@ func (r *elasticRepository) SearchProducts(ctx context.Context, query string, sk
 
 	for _, hit := range res.Hits.Hits {
 		p := ProductDocument{}
-		if err = json.Unmarshal(*&hit.Source, &p); err == nil {
+		if err = json.Unmarshal(hit.Source, &p); err == nil {
 			products = append(products, Product{
 				Id:          hit.Id,
 				Name:        p.Name,
