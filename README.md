@@ -2,13 +2,14 @@
 
 A Go based microservices architecture for e-commerce application.
 
+It includes services for account management, product catalog and order processing. Interservice communications are handled by gRPC. GraphQL serves as the API gateway for the entire microservices. 
+
 - Microservices:
   - Account
   - Catalog
   - Order
   - GraphQL
 
-Microservices communicate with each other through gRPC APIs.
 
 ## How to run
 
@@ -35,11 +36,12 @@ mutation {
 mutation {
   createProduct(product: {
     name: "Burning Bright:Stories", 
-    description: "An Excellent Book by Ron Rash", 
+    description: "In Burning Bright, the stories span the years from the Civil War to the present day, and Rash's historical and modern settings are sewn together in a hauntingly beautiful patchwork of suspense and myth, populated by raw and unforgettable characters mined from the landscape of Appalachia.", 
     price: 32.05
   }) {
     id
     name
+    price
   }
 }
 ```
@@ -48,30 +50,57 @@ mutation {
 ```graphql
 mutation {
   createOrder(order: {
-    accountId: "ACCOUNT_ID_HERE", 
-    products: [{id: "PRODUCT_ID_HERE", quantity: 1}]
+    accountId: "ACCOUNT_ID", 
+    products: [{id: "PRODUCT_ID", quantity: 1}]
   }) {
     id
     totalPrice
     createdAt
+    products {
+        name
+        price
+    }
   }
 }
 ```
 
-### Query
+### Account Query
 ```graphql
 query {
-  accounts {
-    id
-    name
-    orders {
-      id
-      totalPrice
-      products {
+    accounts(id: "ACCOUNT_ID") {
         name
-        price
-      }
+        orders {
+            id
+            createdAt
+            products
+            totalPrice
+        }
     }
-  }
+}
+```
+
+### Search Products
+
+```graphql
+query {
+    products(query: "Burning") {
+        name
+        description
+        price
+    }
+}
+```
+
+
+### Pagination and Filtering
+
+```graphql
+query {
+    products(pagination: {skip: 0 take: 5}, query: "Burning") {
+        id
+        name
+        description
+        price
+    }
 }
 ```
