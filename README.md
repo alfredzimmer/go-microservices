@@ -2,7 +2,7 @@
 
 A Go based microservices architecture for e-commerce application.
 
-It include services for account management, product catalog and order processing. Interservice communications are handled by gRPC. GraphQL serves as the API gateway for the entire microservices. 
+It includes services for account management, product catalog and order processing. Interservice communications are handled by gRPC. GraphQL serves as the API gateway for the entire microservices. 
 
 - Microservices:
   - Account
