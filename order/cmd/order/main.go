@@ -4,16 +4,15 @@ import (
 	"log"
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
 	"github.com/alfredzimmer/go-microservices/order"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/tinrab/retry"
 )
 
-
 type Config struct {
 	DatabaseURL string `envconfig:"DATABASE_URL"`
-	AccountURL string `envconfig:"ACCOUNT_SERVICE_URL"`
-	CatalogURL string `envconfig:"CATALOG_SERVICE_URL"`
+	AccountURL  string `envconfig:"ACCOUNT_SERVICE_URL"`
+	CatalogURL  string `envconfig:"CATALOG_SERVICE_URL"`
 }
 
 func main() {
@@ -26,7 +25,7 @@ func main() {
 	}
 
 	var r order.Repository
-	retry.ForeverSleep(2*time.Second, func(_ int)(err error){
+	retry.ForeverSleep(2*time.Second, func(_ int) (err error) {
 		r, err = order.NewPostgresRepository(cfg.DatabaseURL)
 		if err != nil {
 			log.Println(err)

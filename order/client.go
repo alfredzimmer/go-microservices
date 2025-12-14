@@ -10,7 +10,7 @@ import (
 )
 
 type Client struct {
-	conn *grpc.ClientConn
+	conn    *grpc.ClientConn
 	service pb.OrderServiceClient
 }
 
@@ -32,14 +32,14 @@ func (c *Client) PostOrder(ctx context.Context, accountId string, products []Ord
 	for _, p := range products {
 		protoProducts = append(protoProducts, &pb.PostOrderRequest_OrderProduct{
 			ProductId: p.Id,
-			Quantity: p.Quantity,
+			Quantity:  p.Quantity,
 		})
 	}
 	r, err := c.service.PostOrder(
 		ctx,
 		&pb.PostOrderRequest{
 			AccountId: accountId,
-			Products: protoProducts,
+			Products:  protoProducts,
 		},
 	)
 	if err != nil {
@@ -51,11 +51,11 @@ func (c *Client) PostOrder(ctx context.Context, accountId string, products []Ord
 	newOrderCreatedAt.UnmarshalBinary(newOrder.CreatedAt)
 
 	return &Order{
-		Id: newOrder.Id,
-		CreatedAt: newOrderCreatedAt,
+		Id:         newOrder.Id,
+		CreatedAt:  newOrderCreatedAt,
 		TotalPrice: newOrder.TotalPrice,
-		AccountId: newOrder.AccountId,
-		Products: products,
+		AccountId:  newOrder.AccountId,
+		Products:   products,
 	}, nil
 }
 
@@ -70,10 +70,10 @@ func (c *Client) GetOrdersForAccount(ctx context.Context, accountId string) ([]O
 
 	orders := []Order{}
 	for _, orderProto := range r.Orders {
-		newOrder := Order {
-			Id: orderProto.Id,
+		newOrder := Order{
+			Id:         orderProto.Id,
 			TotalPrice: orderProto.TotalPrice,
-			AccountId: orderProto.AccountId,
+			AccountId:  orderProto.AccountId,
 		}
 		newOrder.CreatedAt = time.Time{}
 		newOrder.CreatedAt.UnmarshalBinary(orderProto.CreatedAt)
@@ -81,11 +81,11 @@ func (c *Client) GetOrdersForAccount(ctx context.Context, accountId string) ([]O
 		products := []OrderedProduct{}
 		for _, p := range orderProto.Products {
 			products = append(products, OrderedProduct{
-				Id: p.Id,
-				Quantity: p.Quantity,
-				Name: p.Name,
+				Id:          p.Id,
+				Quantity:    p.Quantity,
+				Name:        p.Name,
 				Description: p.Description,
-				Price: p.Price,
+				Price:       p.Price,
 			})
 		}
 		newOrder.Products = products

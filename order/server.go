@@ -40,7 +40,7 @@ func ListenGRPC(s Service, accountURL string, catalogURL string, port int) error
 	}
 	serv := grpc.NewServer()
 	pb.RegisterOrderServiceServer(serv, &grpcServer{
-		service: s,
+		service:       s,
 		accountClient: accountClient,
 		catalogClient: catalogClient,
 	})
@@ -59,7 +59,7 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 	for _, p := range r.Products {
 		productIds = append(productIds, p.ProductId)
 	}
-	orderedProducts, err :=s.catalogClient.GetProducts(ctx, 0, 0, productIds, "")
+	orderedProducts, err := s.catalogClient.GetProducts(ctx, 0, 0, productIds, "")
 	if err != nil {
 		log.Println("Error getting products:", err)
 		return nil, errors.New("Products not found")
@@ -68,10 +68,10 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 	products := []OrderedProduct{}
 	for _, p := range orderedProducts {
 		product := OrderedProduct{
-			Id: p.Id,
-			Quantity: 0,
-			Price: p.Price,
-			Name: p.Name,
+			Id:          p.Id,
+			Quantity:    0,
+			Price:       p.Price,
+			Name:        p.Name,
 			Description: p.Description,
 		}
 		for _, rp := range r.Products {
@@ -92,19 +92,19 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 	}
 
 	orderProto := &pb.Order{
-		Id: order.Id,
-		AccountId: order.AccountId,
+		Id:         order.Id,
+		AccountId:  order.AccountId,
 		TotalPrice: order.TotalPrice,
-		Products: []*pb.Order_OrderProduct{},
+		Products:   []*pb.Order_OrderProduct{},
 	}
 	orderProto.CreatedAt, _ = order.CreatedAt.MarshalBinary()
 	for _, p := range order.Products {
 		orderProto.Products = append(orderProto.Products, &pb.Order_OrderProduct{
-			Id: p.Id,
-			Name: p.Name,
+			Id:          p.Id,
+			Name:        p.Name,
 			Description: p.Description,
-			Price: p.Price,
-			Quantity: p.Quantity,
+			Price:       p.Price,
+			Quantity:    p.Quantity,
 		})
 	}
 	return &pb.PostOrderResponse{

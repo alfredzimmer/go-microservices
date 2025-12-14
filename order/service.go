@@ -38,11 +38,11 @@ func NewService(r Repository) Service {
 
 func (s orderService) PostOrder(ctx context.Context, accountId string, products []OrderedProduct) (*Order, error) {
 	o := &Order{
-		Id: ksuid.New().String(),
-		CreatedAt: time.Now().UTC(),
-		AccountId: accountId,
+		Id:         ksuid.New().String(),
+		CreatedAt:  time.Now().UTC(),
+		AccountId:  accountId,
 		TotalPrice: 0.0,
-		Products: products,
+		Products:   products,
 	}
 
 	for _, p := range products {

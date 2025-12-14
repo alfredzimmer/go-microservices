@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-
 type grpcServer struct {
 	pb.UnimplementedCatalogServiceServer
 	service Service
@@ -25,7 +24,7 @@ func ListenGRPC(s Service, port int) error {
 	serv := grpc.NewServer()
 	pb.RegisterCatalogServiceServer(serv, &grpcServer{
 		UnimplementedCatalogServiceServer: pb.UnimplementedCatalogServiceServer{},
-		service: s,
+		service:                           s,
 	})
 	reflection.Register(serv)
 	return serv.Serve(lis)
@@ -39,10 +38,10 @@ func (s *grpcServer) PostProduct(ctx context.Context, r *pb.PostProductRequest) 
 	}
 	return &pb.PostProductResponse{
 		Product: &pb.Product{
-			Id: p.Id,
-			Name: p.Name,
+			Id:          p.Id,
+			Name:        p.Name,
 			Description: p.Description,
-			Price: p.Price,
+			Price:       p.Price,
 		},
 	}, nil
 }
@@ -53,12 +52,12 @@ func (s *grpcServer) GetProduct(ctx context.Context, r *pb.GetProductRequest) (*
 		log.Println(err)
 		return nil, err
 	}
-	return &pb.GetProductResponse {
-		Product: &pb.Product {
-			Id: p.Id,
-			Name: p.Name,
+	return &pb.GetProductResponse{
+		Product: &pb.Product{
+			Id:          p.Id,
+			Name:        p.Name,
 			Description: p.Description,
-			Price: p.Price,
+			Price:       p.Price,
 		},
 	}, nil
 }
@@ -84,10 +83,10 @@ func (s *grpcServer) GetProducts(ctx context.Context, r *pb.GetProductsRequest) 
 		products = append(
 			products,
 			&pb.Product{
-				Id: p.Id,
-				Name: p.Name,
+				Id:          p.Id,
+				Name:        p.Name,
 				Description: p.Description,
-				Price: p.Price,
+				Price:       p.Price,
 			},
 		)
 	}

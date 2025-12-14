@@ -10,7 +10,7 @@ import (
 type Server struct {
 	accountClient *account.Client
 	catalogClient *catalog.Client
-	orderClient *order.Client
+	orderClient   *order.Client
 }
 
 func NewGraphQLServer(accountURL string, catalogURL string, orderURL string) (*Server, error) {
@@ -41,7 +41,6 @@ func NewGraphQLServer(accountURL string, catalogURL string, orderURL string) (*S
 	}, nil
 }
 
-
 func (s *Server) Mutation() MutationResolver {
 	return &mutationResolver{
 		server: s,
@@ -54,14 +53,13 @@ func (s *Server) Query() QueryResolver {
 	}
 }
 
-
 func (s *Server) Account() AccountResolver {
 	return &accountResolver{
 		server: s,
 	}
 }
 
-func (s *Server) ToExecutableSchema() graphql.ExecutableSchema  {
+func (s *Server) ToExecutableSchema() graphql.ExecutableSchema {
 	return NewExecutableSchema(
 		Config{
 			Resolvers: s,

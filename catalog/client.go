@@ -3,12 +3,12 @@ package catalog
 import (
 	"context"
 
-	"google.golang.org/grpc"
 	pb "github.com/alfredzimmer/go-microservices/catalog/pb"
+	"google.golang.org/grpc"
 )
 
 type Client struct {
-	conn *grpc.ClientConn
+	conn    *grpc.ClientConn
 	service pb.CatalogServiceClient
 }
 
@@ -29,9 +29,9 @@ func (c *Client) PostProduct(ctx context.Context, name string, description strin
 	r, err := c.service.PostProduct(
 		ctx,
 		&pb.PostProductRequest{
-			Name: name,
+			Name:        name,
 			Description: description,
-			Price: price,
+			Price:       price,
 		},
 	)
 
@@ -40,10 +40,10 @@ func (c *Client) PostProduct(ctx context.Context, name string, description strin
 	}
 
 	return &Product{
-		Id: r.Product.Id,
-		Name: r.Product.Name,
+		Id:          r.Product.Id,
+		Name:        r.Product.Name,
 		Description: r.Product.Description,
-		Price: r.Product.Price,
+		Price:       r.Product.Price,
 	}, nil
 }
 
@@ -60,20 +60,20 @@ func (c *Client) GetProduct(ctx context.Context, id string) (*Product, error) {
 	}
 
 	return &Product{
-		Id: r.Product.Id,
-		Name: r.Product.Name,
+		Id:          r.Product.Id,
+		Name:        r.Product.Name,
 		Description: r.Product.Description,
-		Price: r.Product.Price,
+		Price:       r.Product.Price,
 	}, nil
 }
 
 func (c *Client) GetProducts(ctx context.Context, skip uint64, take uint64, ids []string, query string) ([]Product, error) {
 	r, err := c.service.GetProducts(
 		ctx,
-		&pb.GetProductsRequest {
-			Ids: ids,
-			Skip: skip,
-			Take: take,
+		&pb.GetProductsRequest{
+			Ids:   ids,
+			Skip:  skip,
+			Take:  take,
 			Query: query,
 		},
 	)
@@ -84,10 +84,10 @@ func (c *Client) GetProducts(ctx context.Context, skip uint64, take uint64, ids 
 
 	for _, p := range r.Products {
 		products = append(products, Product{
-			Id: p.Id,
-			Name: p.Name,
+			Id:          p.Id,
+			Name:        p.Name,
 			Description: p.Description,
-			Price: p.Price,
+			Price:       p.Price,
 		})
 	}
 	return products, err

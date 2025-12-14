@@ -45,7 +45,7 @@ func (r *queryResolver) Accounts(ctx context.Context, pagination *PaginationInpu
 	return accounts, nil
 }
 
-func (r *queryResolver) Products(ctx context.Context, pagination *PaginationInput, query *string,  id *string) ([]*Product, error) {
+func (r *queryResolver) Products(ctx context.Context, pagination *PaginationInput, query *string, id *string) ([]*Product, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 

@@ -66,11 +66,11 @@ func (r *mutationResolver) CreateOrder(ctx context.Context, in OrderInput) (*Ord
 		}
 
 		products = append(products, order.OrderedProduct{
-			Id: productDetails.Id,
-			Name: productDetails.Name,
+			Id:          productDetails.Id,
+			Name:        productDetails.Name,
 			Description: productDetails.Description,
-			Price: productDetails.Price,
-			Quantity: uint32(p.Quantity),
+			Price:       productDetails.Price,
+			Quantity:    uint32(p.Quantity),
 		})
 	}
 
@@ -81,8 +81,8 @@ func (r *mutationResolver) CreateOrder(ctx context.Context, in OrderInput) (*Ord
 	}
 
 	return &Order{
-		ID: o.Id,
-		CreatedAt: o.CreatedAt,
+		ID:         o.Id,
+		CreatedAt:  o.CreatedAt,
 		TotalPrice: o.TotalPrice,
 	}, nil
 }
