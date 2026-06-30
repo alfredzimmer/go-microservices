@@ -53,6 +53,7 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 	_, err := s.accountClient.GetAccount(ctx, r.AccountId)
 	if err != nil {
 		log.Println("Error getting account: ", err)
+		return nil, errors.New("account not found")
 	}
 
 	productIds := []string{}

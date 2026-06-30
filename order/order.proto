@@ -33,13 +33,13 @@ message PostOrderResponse {
     Order order = 1;
 }
 
- // message GetOrderRequest {
- //     string id = 1;
- // }
+ message GetOrderRequest {
+    string id = 1;
+}
 
- // message GetOrderResponse {
- //     Order order = 1;
- // }
+message GetOrderResponse {
+  Order order = 1;
+}
 
  message GetOrdersForAccountRequest {
      string accountId = 1;
