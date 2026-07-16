@@ -28,18 +28,16 @@ func jaegerURL() string {
 	return "http://localhost:16686"
 }
 
-// gql posts a GraphQL query and decodes the data field into out, failing
-// the test on transport or GraphQL errors.
-func gql(t *testing.T, query string, out any) {
-	t.Helper()
-
+// gqlDo posts a GraphQL query and decodes the data field into out,
+// returning any transport or GraphQL error.
+func gqlDo(query string, out any) error {
 	body, err := json.Marshal(map[string]string{"query": query})
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	resp, err := http.Post(graphqlURL(), "application/json", bytes.NewReader(body))
 	if err != nil {
-		t.Fatalf("GraphQL request failed: %v", err)
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -50,37 +48,78 @@ func gql(t *testing.T, query string, out any) {
 		} `json:"errors"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		t.Fatalf("invalid GraphQL response: %v", err)
+		return fmt.Errorf("invalid GraphQL response: %w", err)
 	}
 	if len(result.Errors) > 0 {
-		t.Fatalf("GraphQL errors for %s: %+v", query, result.Errors)
+		return fmt.Errorf("GraphQL errors: %+v", result.Errors)
 	}
 	if out != nil {
 		if err := json.Unmarshal(result.Data, out); err != nil {
-			t.Fatalf("cannot decode GraphQL data: %v", err)
+			return fmt.Errorf("cannot decode GraphQL data: %w", err)
 		}
+	}
+	return nil
+}
+
+// gql is the failing-test wrapper around gqlDo.
+func gql(t *testing.T, query string, out any) {
+	t.Helper()
+	if err := gqlDo(query, out); err != nil {
+		t.Fatalf("%v (query: %s)", err, query)
 	}
 }
 
-// TestMain waits for the compose stack to come up; elasticsearch can take
-// a minute, and the services crash-loop until their databases are ready.
-func TestMain(m *testing.M) {
-	deadline := time.Now().Add(3 * time.Minute)
+// pollUntil retries probe every two seconds until it succeeds or the
+// deadline passes, returning the last error.
+func pollUntil(deadline time.Time, probe func() error) error {
 	for {
-		resp, err := http.Post(graphqlURL(), "application/json",
-			strings.NewReader(`{"query":"{__typename}"}`))
+		err := probe()
 		if err == nil {
-			resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				break
-			}
+			return nil
 		}
 		if time.Now().After(deadline) {
-			fmt.Fprintf(os.Stderr, "GraphQL gateway at %s not ready after 3m (last error: %v)\n", graphqlURL(), err)
-			os.Exit(1)
+			return err
 		}
 		time.Sleep(2 * time.Second)
 	}
+}
+
+// TestMain waits for the whole compose stack to come up; elasticsearch can
+// take a minute, and the services crash-loop until their databases are
+// ready. The gateway answering is not enough (its backends may still be
+// starting), so the probes exercise every service through the gateway:
+// createAccount covers account+postgres, createProduct covers
+// catalog+elasticsearch (and creates the ES index), and reading the
+// account's orders covers the order service.
+func TestMain(m *testing.M) {
+	deadline := time.Now().Add(3 * time.Minute)
+
+	var accountResp struct {
+		CreateAccount struct {
+			Id string `json:"id"`
+		} `json:"createAccount"`
+	}
+	probes := []struct {
+		name  string
+		probe func() error
+	}{
+		{"account service", func() error {
+			return gqlDo(`mutation E2EReadinessAccount { createAccount(account: {name: "e2e-readiness"}) { id } }`, &accountResp)
+		}},
+		{"catalog service", func() error {
+			return gqlDo(`mutation E2EReadinessProduct { createProduct(product: {name: "e2e-readiness", description: "stack readiness probe", price: 1}) { id } }`, nil)
+		}},
+		{"order service", func() error {
+			return gqlDo(fmt.Sprintf(`query E2EReadinessOrders { accounts(id: %q) { orders { id } } }`, accountResp.CreateAccount.Id), nil)
+		}},
+	}
+	for _, p := range probes {
+		if err := pollUntil(deadline, p.probe); err != nil {
+			fmt.Fprintf(os.Stderr, "%s not ready after 3m (last error: %v)\n", p.name, err)
+			os.Exit(1)
+		}
+	}
+
 	os.Exit(m.Run())
 }
 
@@ -178,17 +217,13 @@ func TestTraceReachesJaeger(t *testing.T) {
 
 	// The batch exporter flushes every few seconds; poll Jaeger for the trace.
 	wantServices := []string{"graphql", "order", "account", "catalog"}
-	deadline := time.Now().Add(60 * time.Second)
-	var lastErr error
-	for time.Now().Before(deadline) {
-		trace, err := findTrace(wantServices, "E2EJaegerOrder")
-		if err == nil && trace != nil {
-			return
-		}
-		lastErr = err
-		time.Sleep(3 * time.Second)
+	err := pollUntil(time.Now().Add(60*time.Second), func() error {
+		_, err := findTrace(wantServices, "E2EJaegerOrder")
+		return err
+	})
+	if err != nil {
+		t.Fatalf("no trace containing services %v and operation E2EJaegerOrder found in Jaeger within 60s (last error: %v)", wantServices, err)
 	}
-	t.Fatalf("no trace containing services %v and operation E2EJaegerOrder found in Jaeger within 60s (last error: %v)", wantServices, lastErr)
 }
 
 // findTrace queries Jaeger for recent graphql traces and returns one that
