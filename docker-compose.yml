@@ -8,6 +8,11 @@ services:
     environment:
       DATABASE_URL: postgres://alfred:123456@account_db/alfred?sslmode=disable
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      TLS_CERT_FILE: /certs/account.crt
+      TLS_KEY_FILE: /certs/account.key
+      TLS_CA_FILE: /certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
     restart: on-failure
 
   catalog:
@@ -19,6 +24,11 @@ services:
     environment:
       DATABASE_URL: http://catalog_db:9200
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      TLS_CERT_FILE: /certs/catalog.crt
+      TLS_KEY_FILE: /certs/catalog.key
+      TLS_CA_FILE: /certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
     restart: on-failure
 
   order:
@@ -32,6 +42,11 @@ services:
       ACCOUNT_SERVICE_URL: account:8080
       CATALOG_SERVICE_URL: catalog:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      TLS_CERT_FILE: /certs/order.crt
+      TLS_KEY_FILE: /certs/order.key
+      TLS_CA_FILE: /certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
     restart: on-failure
 
   graphql:
@@ -48,6 +63,11 @@ services:
       CATALOG_SERVICE_URL: catalog:8080
       ORDER_SERVICE_URL: order:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      TLS_CERT_FILE: /certs/graphql.crt
+      TLS_KEY_FILE: /certs/graphql.key
+      TLS_CA_FILE: /certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
     restart: on-failure
 
   account_db:

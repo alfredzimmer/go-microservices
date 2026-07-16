@@ -10,6 +10,7 @@ import (
 	"github.com/alfredzimmer/go-microservices/account"
 	"github.com/alfredzimmer/go-microservices/catalog"
 	"github.com/alfredzimmer/go-microservices/order/pb"
+	"github.com/alfredzimmer/go-microservices/tlsconfig"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -39,7 +40,13 @@ func ListenGRPC(s Service, accountURL string, catalogURL string, port int) error
 		catalogClient.Close()
 		return err
 	}
-	serv := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
+	tlsOpt, err := tlsconfig.ServerCredentials()
+	if err != nil {
+		accountClient.Close()
+		catalogClient.Close()
+		return err
+	}
+	serv := grpc.NewServer(tlsOpt, grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	pb.RegisterOrderServiceServer(serv, &grpcServer{
 		service:       s,
 		accountClient: accountClient,

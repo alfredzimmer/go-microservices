@@ -9,6 +9,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/alfredzimmer/go-microservices/telemetry"
+	"github.com/alfredzimmer/go-microservices/tlsconfig"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/ravilushqa/otelgqlgen"
 )
@@ -51,8 +52,14 @@ func run() int {
 	http.Handle("/graphql", srv)
 	http.Handle("/playground", playground.Handler("alfred", "/graphql"))
 
-	slog.Info("Listening on port 8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if tlsconfig.Enabled() {
+		slog.Info("Listening on port 8080 (HTTPS)")
+		err = http.ListenAndServeTLS(":8080", tlsconfig.CertFile(), tlsconfig.KeyFile(), nil)
+	} else {
+		slog.Warn("TLS disabled — serving plaintext HTTP (set TLS_CERT_FILE/TLS_KEY_FILE/TLS_CA_FILE)")
+		err = http.ListenAndServe(":8080", nil)
+	}
+	if err != nil {
 		slog.Error("Server stopped", "error", err)
 		return 1
 	}

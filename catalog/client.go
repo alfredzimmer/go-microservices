@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/alfredzimmer/go-microservices/catalog/pb"
+	"github.com/alfredzimmer/go-microservices/tlsconfig"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
@@ -14,7 +15,11 @@ type Client struct {
 }
 
 func NewClient(url string) (*Client, error) {
-	conn, err := grpc.Dial(url, grpc.WithInsecure(), grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
+	tlsOpt, err := tlsconfig.ClientCredentials()
+	if err != nil {
+		return nil, err
+	}
+	conn, err := grpc.Dial(url, tlsOpt, grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	if err != nil {
 		return nil, err
 	}

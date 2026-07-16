@@ -1,20 +1,27 @@
-.PHONY: test e2e e2e-up e2e-test e2e-down
+.PHONY: test e2e e2e-up e2e-test e2e-down certs certs-clean
 
 # Unit + integration tests (no Docker required).
 test:
 	go vet ./...
 	go test -count=1 ./...
 
+# Local CA + per-service identity certs for mTLS between services.
+certs:
+	./scripts/gen-certs.sh
+
+certs-clean:
+	rm -rf certs
+
 # Full end-to-end run: build and start the compose stack, run the e2e suite
 # against it, then tear everything down (even if the tests fail).
-e2e:
+e2e: certs
 	docker compose up -d --build
 	go test -tags e2e -count=1 -timeout 10m ./e2e/...; status=$$?; \
 	docker compose down -v; \
 	exit $$status
 
 # Pieces of the above, for keeping the stack alive while iterating.
-e2e-up:
+e2e-up: certs
 	docker compose up -d --build
 
 e2e-test:

@@ -4,6 +4,7 @@ WORKDIR /go/src/github.com/alfredzimmer/go-microservices
 COPY go.mod go.sum ./
 RUN go mod download
 COPY telemetry telemetry
+COPY tlsconfig tlsconfig
 COPY catalog catalog
 RUN GO111MODULE=on go build -o /go/bin/app ./catalog/cmd/catalog
 

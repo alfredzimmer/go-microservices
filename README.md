@@ -4,20 +4,44 @@ A Go based microservices architecture for e-commerce application.
 
 It includes services for account management, product catalog and order processing. Interservice communications are handled by gRPC. GraphQL serves as the API gateway for the entire microservices. 
 
-- Microservices:
-  - Account
-  - Catalog
-  - Order
-  - GraphQL
+```
+  
+
+                          ┌──────────────────────┐
+   client (port 8000) ──▶ │   GraphQL gateway    │  gqlgen, /playground
+                          └───┬──────┬──────┬────┘
+                        gRPC  │      │      │  gRPC
+                     ┌────────┘      │      └─────────┐
+                     ▼               ▼                ▼
+               ┌──────────┐   ┌──────────┐    ┌──────────────┐
+               │ account  │   │ catalog  │    │    order     │
+               └────┬─────┘   └────┬─────┘    └──┬───────┬───┘
+                    ▼              ▼             ▼       │ gRPC calls back to
+               PostgreSQL    Elasticsearch   PostgreSQL  │ account + catalog
+                                                         ▼ (validate account,
+                                                            fetch product prices)
+```
 
 
 ## How to run
 
 ```bash
+make certs        # generate the local CA + per-service TLS certificates
 docker-compose up -d
 ```
 
-Then go to `localhost:8000/playground`.
+Then go to `https://localhost:8000/playground`. The gateway serves HTTPS with a
+certificate signed by the local CA in `certs/ca.crt`; your browser will warn
+unless you import that CA (or click through the warning).
+
+## Transport security
+
+All inter-service traffic is encrypted with **mutual TLS**: every service holds
+an identity certificate signed by a shared local CA (`make certs`) and both
+sides of every gRPC connection verify each other. Plaintext clients are
+rejected at the handshake. Certificate paths are configured with
+`TLS_CERT_FILE`/`TLS_KEY_FILE`/`TLS_CA_FILE`; when unset (in-process tests),
+services fall back to plaintext and log a warning.
 
 ## Observability
 

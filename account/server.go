@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/alfredzimmer/go-microservices/account/pb"
+	"github.com/alfredzimmer/go-microservices/tlsconfig"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -21,7 +22,11 @@ func ListenGRPC(s Service, port int) error {
 	if err != nil {
 		return err
 	}
-	serv := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
+	tlsOpt, err := tlsconfig.ServerCredentials()
+	if err != nil {
+		return err
+	}
+	serv := grpc.NewServer(tlsOpt, grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	pb.RegisterAccountServiceServer(serv, &grpcServer{
 		UnimplementedAccountServiceServer: pb.UnimplementedAccountServiceServer{},
 		service:                           s,
