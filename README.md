@@ -19,6 +19,37 @@ docker-compose up -d
 
 Then go to `localhost:8000/playground`.
 
+## Observability
+
+### Distributed tracing
+
+All services are instrumented with OpenTelemetry. Every GraphQL request produces
+a single trace that follows the request through the gateway and across the gRPC
+hops into the account, catalog and order services, and spans are exported to
+Jaeger (started automatically by docker-compose).
+
+- Open the Jaeger UI at `http://localhost:16686`
+- Pick a service (e.g. `graphql`) and click **Find Traces**
+- Open a trace to see the full request tree with per-hop timings
+
+The OTLP endpoint is configured per service with the standard
+`OTEL_EXPORTER_OTLP_ENDPOINT` environment variable.
+
+### Structured logging
+
+Services log JSON to stdout via `log/slog`, tagged with the service name. Logs
+written inside a request (`slog.ErrorContext(ctx, ...)`) also carry the
+`trace_id`/`span_id` of the active trace, so a log line can be looked up
+directly in Jaeger:
+
+```bash
+docker-compose logs -f order
+```
+
+```json
+{"time":"...","level":"ERROR","msg":"Error getting account","service":"order","accountId":"...","error":"...","trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"00f067aa0ba902b7"}
+```
+
 ## Sample GraphQL APIs
 
 ### Create an Account

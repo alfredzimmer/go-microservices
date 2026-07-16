@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -17,7 +17,7 @@ func (r *queryResolver) Accounts(ctx context.Context, pagination *PaginationInpu
 	if id != nil {
 		r, err := r.server.accountClient.GetAccount(ctx, *id)
 		if err != nil {
-			log.Println(err)
+			slog.ErrorContext(ctx, "Error getting account", "accountId", *id, "error", err)
 			return nil, err
 		}
 		return []*Account{{Id: r.Id, Name: r.Name}}, nil
@@ -30,7 +30,7 @@ func (r *queryResolver) Accounts(ctx context.Context, pagination *PaginationInpu
 	}
 	accountList, err := r.server.accountClient.GetAccounts(ctx, skip, take)
 	if err != nil {
-		log.Println(err)
+		slog.ErrorContext(ctx, "Error getting accounts", "error", err)
 		return nil, err
 	}
 	var accounts []*Account
@@ -52,7 +52,7 @@ func (r *queryResolver) Products(ctx context.Context, pagination *PaginationInpu
 	if id != nil {
 		r, err := r.server.catalogClient.GetProduct(ctx, *id)
 		if err != nil {
-			log.Println(err)
+			slog.ErrorContext(ctx, "Error getting product", "productId", *id, "error", err)
 			return nil, err
 		}
 		return []*Product{{ID: r.Id, Name: r.Name, Description: r.Description, Price: r.Price}}, nil
@@ -69,7 +69,7 @@ func (r *queryResolver) Products(ctx context.Context, pagination *PaginationInpu
 	}
 	productList, err := r.server.catalogClient.GetProducts(ctx, skip, take, nil, q)
 	if err != nil {
-		log.Println(err)
+		slog.ErrorContext(ctx, "Error getting products", "query", q, "error", err)
 		return nil, err
 	}
 

@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/alfredzimmer/go-microservices/account/pb"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -20,7 +21,7 @@ func ListenGRPC(s Service, port int) error {
 	if err != nil {
 		return err
 	}
-	serv := grpc.NewServer()
+	serv := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	pb.RegisterAccountServiceServer(serv, &grpcServer{
 		UnimplementedAccountServiceServer: pb.UnimplementedAccountServiceServer{},
 		service:                           s,

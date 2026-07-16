@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/alfredzimmer/go-microservices/order"
@@ -21,7 +21,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, in AccountInput) (
 
 	a, err := r.server.accountClient.PostAccount(ctx, in.Name)
 	if err != nil {
-		log.Println(err)
+		slog.ErrorContext(ctx, "Error creating account", "error", err)
 		return nil, err
 	}
 
@@ -37,7 +37,7 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, in ProductInput) (
 
 	p, err := r.server.catalogClient.PostProduct(ctx, in.Name, in.Description, in.Price)
 	if err != nil {
-		log.Println(err)
+		slog.ErrorContext(ctx, "Error creating product", "error", err)
 		return nil, err
 	}
 
@@ -61,7 +61,7 @@ func (r *mutationResolver) CreateOrder(ctx context.Context, in OrderInput) (*Ord
 
 		productDetails, err := r.server.catalogClient.GetProduct(ctx, p.ID)
 		if err != nil {
-			log.Println("Error fetching product: ", err)
+			slog.ErrorContext(ctx, "Error fetching product", "productId", p.ID, "error", err)
 			return nil, err
 		}
 
@@ -76,7 +76,7 @@ func (r *mutationResolver) CreateOrder(ctx context.Context, in OrderInput) (*Ord
 
 	o, err := r.server.orderClient.PostOrder(ctx, in.AccountID, products)
 	if err != nil {
-		log.Println(err)
+		slog.ErrorContext(ctx, "Error creating order", "accountId", in.AccountID, "error", err)
 		return nil, err
 	}
 

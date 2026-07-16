@@ -3,10 +3,11 @@ package catalog
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 
 	pb "github.com/alfredzimmer/go-microservices/catalog/pb"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -21,7 +22,7 @@ func ListenGRPC(s Service, port int) error {
 	if err != nil {
 		return err
 	}
-	serv := grpc.NewServer()
+	serv := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	pb.RegisterCatalogServiceServer(serv, &grpcServer{
 		UnimplementedCatalogServiceServer: pb.UnimplementedCatalogServiceServer{},
 		service:                           s,
@@ -33,7 +34,7 @@ func ListenGRPC(s Service, port int) error {
 func (s *grpcServer) PostProduct(ctx context.Context, r *pb.PostProductRequest) (*pb.PostProductResponse, error) {
 	p, err := s.service.PostProduct(ctx, r.Name, r.Description, r.Price)
 	if err != nil {
-		log.Println(err)
+		slog.ErrorContext(ctx, "Error posting product", "error", err)
 		return nil, err
 	}
 	return &pb.PostProductResponse{
@@ -49,7 +50,7 @@ func (s *grpcServer) PostProduct(ctx context.Context, r *pb.PostProductRequest) 
 func (s *grpcServer) GetProduct(ctx context.Context, r *pb.GetProductRequest) (*pb.GetProductResponse, error) {
 	p, err := s.service.GetProductById(ctx, r.Id)
 	if err != nil {
-		log.Println(err)
+		slog.ErrorContext(ctx, "Error getting product", "id", r.Id, "error", err)
 		return nil, err
 	}
 	return &pb.GetProductResponse{
@@ -75,7 +76,7 @@ func (s *grpcServer) GetProducts(ctx context.Context, r *pb.GetProductsRequest) 
 	}
 
 	if err != nil {
-		log.Println(err)
+		slog.ErrorContext(ctx, "Error getting products", "error", err)
 		return nil, err
 	}
 	products := []*pb.Product{}

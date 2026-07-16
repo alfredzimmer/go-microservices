@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 
 	"github.com/alfredzimmer/go-microservices/account"
 	"github.com/alfredzimmer/go-microservices/catalog"
 	"github.com/alfredzimmer/go-microservices/order/pb"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -38,7 +39,7 @@ func ListenGRPC(s Service, accountURL string, catalogURL string, port int) error
 		catalogClient.Close()
 		return err
 	}
-	serv := grpc.NewServer()
+	serv := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	pb.RegisterOrderServiceServer(serv, &grpcServer{
 		service:       s,
 		accountClient: accountClient,
@@ -52,7 +53,7 @@ func ListenGRPC(s Service, accountURL string, catalogURL string, port int) error
 func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb.PostOrderResponse, error) {
 	_, err := s.accountClient.GetAccount(ctx, r.AccountId)
 	if err != nil {
-		log.Println("Error getting account: ", err)
+		slog.ErrorContext(ctx, "Error getting account", "accountId", r.AccountId, "error", err)
 		return nil, errors.New("account not found")
 	}
 
@@ -62,7 +63,7 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 	}
 	orderedProducts, err := s.catalogClient.GetProducts(ctx, 0, 0, productIds, "")
 	if err != nil {
-		log.Println("Error getting products:", err)
+		slog.ErrorContext(ctx, "Error getting products", "productIds", productIds, "error", err)
 		return nil, errors.New("Products not found")
 	}
 
@@ -88,7 +89,7 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 	}
 	order, err := s.service.PostOrder(ctx, r.AccountId, products)
 	if err != nil {
-		log.Println("Error posting order", err)
+		slog.ErrorContext(ctx, "Error posting order", "accountId", r.AccountId, "error", err)
 		return nil, errors.New("could not post order")
 	}
 
@@ -116,7 +117,7 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 func (s *grpcServer) GetOrdersForAccount(ctx context.Context, r *pb.GetOrdersForAccountRequest) (*pb.GetOrdersForAccountResponse, error) {
 	accountOrders, err := s.service.GetOrdersForAccount(ctx, r.AccountId)
 	if err != nil {
-		log.Println(err)
+		slog.ErrorContext(ctx, "Error getting orders for account", "accountId", r.AccountId, "error", err)
 		return nil, err
 	}
 
@@ -133,7 +134,7 @@ func (s *grpcServer) GetOrdersForAccount(ctx context.Context, r *pb.GetOrdersFor
 	}
 	products, err := s.catalogClient.GetProducts(ctx, 0, 0, productIds, "")
 	if err != nil {
-		log.Println("Error getting account products", err)
+		slog.ErrorContext(ctx, "Error getting account products", "accountId", r.AccountId, "error", err)
 		return nil, err
 	}
 

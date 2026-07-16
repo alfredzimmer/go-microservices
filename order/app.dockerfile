@@ -3,6 +3,7 @@ RUN apk --no-cache add gcc g++ make ca-certificates
 WORKDIR /go/src/github.com/alfredzimmer/go-microservices
 COPY go.mod go.sum ./
 RUN go mod download
+COPY telemetry telemetry
 COPY account account
 COPY catalog catalog
 COPY order order
