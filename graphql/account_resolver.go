@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -16,7 +16,7 @@ func (r *accountResolver) Orders(ctx context.Context, obj *Account) ([]*Order, e
 
 	orderList, err := r.server.orderClient.GetOrdersForAccount(ctx, obj.Id)
 	if err != nil {
-		log.Println(err)
+		slog.ErrorContext(ctx, "Error getting orders for account", "accountId", obj.Id, "error", err)
 		return nil, err
 	}
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 
 	"github.com/olivere/elastic/v7"
 )
@@ -80,7 +79,6 @@ func (r *elasticRepository) ListProducts(ctx context.Context, skip uint64, take 
 	res, err := r.client.Search().Index("catalog").Type("product").Query(elastic.NewMatchAllQuery()).From(int(skip)).Size(int(take)).Do(ctx)
 
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 
@@ -111,7 +109,6 @@ func (r *elasticRepository) ListProductsWithIds(ctx context.Context, ids []strin
 	res, err := r.client.MultiGet().Add(items...).Do(ctx)
 
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 
@@ -138,7 +135,6 @@ func (r *elasticRepository) SearchProducts(ctx context.Context, query string, sk
 		Query(elastic.NewMultiMatchQuery(query, "name", "description")).
 		From(int(skip)).Size(int(take)).Do(ctx)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	products := []Product{}

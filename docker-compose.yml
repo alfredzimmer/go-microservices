@@ -7,6 +7,7 @@ services:
       - account_db
     environment:
       DATABASE_URL: postgres://alfred:123456@account_db/alfred?sslmode=disable
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     restart: on-failure
 
   catalog:
@@ -17,6 +18,7 @@ services:
       - catalog_db
     environment:
       DATABASE_URL: http://catalog_db:9200
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     restart: on-failure
 
   order:
@@ -29,6 +31,7 @@ services:
       DATABASE_URL: postgres://alfred:123456@order_db/alfred?sslmode=disable
       ACCOUNT_SERVICE_URL: account:8080
       CATALOG_SERVICE_URL: catalog:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     restart: on-failure
 
   graphql:
@@ -44,6 +47,7 @@ services:
       ACCOUNT_SERVICE_URL: account:8080
       CATALOG_SERVICE_URL: catalog:8080
       ORDER_SERVICE_URL: order:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     restart: on-failure
 
   account_db:
@@ -70,4 +74,12 @@ services:
       POSTGRES_DB: alfred
       POSTGRES_USER: alfred
       POSTGRES_PASSWORD: 123456
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - 16686:16686
     restart: unless-stopped

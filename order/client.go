@@ -2,10 +2,10 @@ package order
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/alfredzimmer/go-microservices/order/pb"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -15,7 +15,7 @@ type Client struct {
 }
 
 func NewClient(url string) (*Client, error) {
-	conn, err := grpc.Dial(url, grpc.WithInsecure())
+	conn, err := grpc.Dial(url, grpc.WithInsecure(), grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,6 @@ func (c *Client) GetOrdersForAccount(ctx context.Context, accountId string) ([]O
 		AccountId: accountId,
 	})
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 
