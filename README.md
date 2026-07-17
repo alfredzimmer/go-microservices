@@ -34,6 +34,15 @@ Then go to `https://localhost:8000/playground`. The gateway serves HTTPS with a
 certificate signed by the local CA in `certs/ca.crt`; your browser will warn
 unless you import that CA (or click through the warning).
 
+## API documentation
+
+The GraphQL schema is the API documentation: every type, field and argument is
+described in [`graphql/schema.graphql`](graphql/schema.graphql), and those
+descriptions surface in the playground's **Docs** panel (and any
+introspection-based tooling). Explore and run operations there — the e2e suite
+in [`e2e/e2e_test.go`](e2e/e2e_test.go) also doubles as a set of working,
+tested example queries and mutations.
+
 ## Transport security
 
 All inter-service traffic is encrypted with **mutual TLS**: every service holds
@@ -72,90 +81,4 @@ docker-compose logs -f order
 
 ```json
 {"time":"...","level":"ERROR","msg":"Error getting account","service":"order","accountId":"...","error":"...","trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"00f067aa0ba902b7"}
-```
-
-## Sample GraphQL APIs
-
-### Create an Account
-```graphql
-mutation {
-    createAccount(account: {name: "Alfred"}) {
-        id
-        name
-    }
-}
-```
-
-### Create a Product
-```graphql
-mutation {
-  createProduct(product: {
-    name: "Burning Bright:Stories", 
-    description: "In Burning Bright, the stories span the years from the Civil War to the present day, and Rash's historical and modern settings are sewn together in a hauntingly beautiful patchwork of suspense and myth, populated by raw and unforgettable characters mined from the landscape of Appalachia.", 
-    price: 32.05
-  }) {
-    id
-    name
-    price
-  }
-}
-```
-
-### Place an Order
-```graphql
-mutation {
-  createOrder(order: {
-    accountId: "ACCOUNT_ID", 
-    products: [{id: "PRODUCT_ID", quantity: 1}]
-  }) {
-    id
-    totalPrice
-    createdAt
-    products {
-        name
-        price
-    }
-  }
-}
-```
-
-### Account Query
-```graphql
-query {
-    accounts(id: "ACCOUNT_ID") {
-        name
-        orders {
-            id
-            createdAt
-            products
-            totalPrice
-        }
-    }
-}
-```
-
-### Search Products
-
-```graphql
-query {
-    products(query: "Burning") {
-        name
-        description
-        price
-    }
-}
-```
-
-
-### Pagination and Filtering
-
-```graphql
-query {
-    products(pagination: {skip: 0 take: 5}, query: "Burning") {
-        id
-        name
-        description
-        price
-    }
-}
 ```

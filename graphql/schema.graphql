@@ -1,11 +1,21 @@
+"""
+An RFC 3339 timestamp, e.g. "2026-07-17T16:57:19Z".
+"""
 scalar Time
 
+"""
+A customer account. Orders are resolved lazily from the order service.
+"""
 type Account {
     id: String!
     name: String!
+    "All orders placed by this account, including their ordered products."
     orders: [Order!]!
 }
 
+"""
+A product in the catalog, stored and searched in Elasticsearch.
+"""
 type Product {
     id: String!
     name: String!
@@ -13,13 +23,21 @@ type Product {
     price: Float!
 }
 
+"""
+A placed order. Prices are captured at order time, so totalPrice and the
+product prices below do not change if the catalog is updated later.
+"""
 type Order {
     id: String!
     createdAt: Time!
+    "Sum of price × quantity over all ordered products, computed server-side."
     totalPrice: Float!
     products: [OrderedProduct!]!
 }
 
+"""
+A product line within an order: catalog data plus the ordered quantity.
+"""
 type OrderedProduct {
     id: String!
     name: String!
@@ -28,8 +46,13 @@ type OrderedProduct {
     quantity: Int!
 }
 
+"""
+Offset pagination. take defaults to 100 and is capped at 100.
+"""
 input PaginationInput {
+    "Number of items to skip from the start of the result set."
     skip: Int
+    "Maximum number of items to return (server caps this at 100)."
     take: Int
 }
 
@@ -43,23 +66,42 @@ input ProductInput {
     price: Float!
 }
 
+"""
+A product to order, referenced by catalog id.
+"""
 input OrderedProductInput {
     id: String!
     quantity: Int!
 }
 
 input OrderInput {
+    "Id of an existing account; the order service validates it exists."
     accountId: String!
     products: [OrderedProductInput!]!
 }
 
 type Mutation {
+    "Register a new account with the given name."
     createAccount(account: AccountInput!): Account
+    "Add a product to the catalog and index it for search."
     createProduct(product: ProductInput!): Product
+    """
+    Place an order for an existing account. Current catalog prices are
+    fetched per product and frozen into the order's totalPrice.
+    """
     createOrder(order: OrderInput!): Order
 }
 
 type Query {
+    """
+    List accounts, or look one up by id. When id is set it takes precedence
+    and pagination is ignored; the result is then a single-element list.
+    """
     accounts(pagination: PaginationInput, id: String): [Account!]!
+    """
+    List or search products. query runs a full-text match against name and
+    description. When id is set it takes precedence over query and
+    pagination, returning a single-element list.
+    """
     products(pagination: PaginationInput, query: String, id: String): [Product!]!
 }
