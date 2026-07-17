@@ -25,6 +25,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Generate mTLS certs
+        run: make certs
       - name: Start the stack
         run: docker compose up -d --build
       - name: Run e2e tests
