@@ -11,10 +11,29 @@ import (
 	"github.com/alfredzimmer/go-microservices/catalog"
 	"github.com/alfredzimmer/go-microservices/order/pb"
 	"github.com/alfredzimmer/go-microservices/tlsconfig"
+	"github.com/segmentio/ksuid"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 )
+
+// idempotencyKeyHeader is the gRPC metadata key carrying a client-supplied
+// idempotency key for PostOrder. Reusing a key returns the original order
+// instead of placing a new one.
+const idempotencyKeyHeader = "idempotency-key"
+
+// idempotencyKeyFromContext returns the caller's idempotency key from request
+// metadata, or a fresh one when absent so a keyless caller keeps today's
+// "every call is a new order" behavior.
+func idempotencyKeyFromContext(ctx context.Context) string {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if vals := md.Get(idempotencyKeyHeader); len(vals) > 0 && vals[0] != "" {
+			return vals[0]
+		}
+	}
+	return ksuid.New().String()
+}
 
 type grpcServer struct {
 	pb.UnimplementedOrderServiceServer
@@ -94,7 +113,7 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 			products = append(products, product)
 		}
 	}
-	order, err := s.service.PostOrder(ctx, r.AccountId, products)
+	order, err := s.service.PostOrder(ctx, r.AccountId, products, idempotencyKeyFromContext(ctx))
 	if err != nil {
 		slog.ErrorContext(ctx, "Error posting order", "accountId", r.AccountId, "error", err)
 		return nil, errors.New("could not post order")

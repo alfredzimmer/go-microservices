@@ -13,18 +13,26 @@ type AccountInput struct {
 type Mutation struct {
 }
 
+// A placed order. Prices are captured at order time, so totalPrice and the
+// product prices below do not change if the catalog is updated later.
 type Order struct {
-	ID         string            `json:"id"`
-	CreatedAt  time.Time         `json:"createdAt"`
+	ID        string    `json:"id"`
+	CreatedAt time.Time `json:"createdAt"`
+	// Sum of price × quantity over all ordered products, computed server-side.
 	TotalPrice float64           `json:"totalPrice"`
 	Products   []*OrderedProduct `json:"products"`
 }
 
 type OrderInput struct {
-	AccountID string                 `json:"accountId"`
-	Products  []*OrderedProductInput `json:"products"`
+	// Id of an existing account; the order service validates it exists.
+	AccountID string `json:"accountId"`
+	// Optional idempotency key. Two createOrder calls carrying the same key
+	// place the order once; the second returns the order from the first.
+	IdempotencyKey *string                `json:"idempotencyKey,omitempty"`
+	Products       []*OrderedProductInput `json:"products"`
 }
 
+// A product line within an order: catalog data plus the ordered quantity.
 type OrderedProduct struct {
 	ID          string  `json:"id"`
 	Name        string  `json:"name"`
@@ -33,16 +41,21 @@ type OrderedProduct struct {
 	Quantity    int     `json:"quantity"`
 }
 
+// A product to order, referenced by catalog id.
 type OrderedProductInput struct {
 	ID       string `json:"id"`
 	Quantity int    `json:"quantity"`
 }
 
+// Offset pagination. take defaults to 100 and is capped at 100.
 type PaginationInput struct {
+	// Number of items to skip from the start of the result set.
 	Skip *int `json:"skip,omitempty"`
+	// Maximum number of items to return (server caps this at 100).
 	Take *int `json:"take,omitempty"`
 }
 
+// A product in the catalog, stored and searched in Elasticsearch.
 type Product struct {
 	ID          string  `json:"id"`
 	Name        string  `json:"name"`

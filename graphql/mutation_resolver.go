@@ -74,7 +74,12 @@ func (r *mutationResolver) CreateOrder(ctx context.Context, in OrderInput) (*Ord
 		})
 	}
 
-	o, err := r.server.orderClient.PostOrder(ctx, in.AccountID, products)
+	idempotencyKey := ""
+	if in.IdempotencyKey != nil {
+		idempotencyKey = *in.IdempotencyKey
+	}
+
+	o, err := r.server.orderClient.PostOrder(ctx, in.AccountID, products, idempotencyKey)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error creating order", "accountId", in.AccountID, "error", err)
 		return nil, err

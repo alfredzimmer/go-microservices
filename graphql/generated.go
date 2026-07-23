@@ -2864,7 +2864,7 @@ func (ec *executionContext) unmarshalInputOrderInput(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"accountId", "products"}
+	fieldsInOrder := [...]string{"accountId", "idempotencyKey", "products"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -2878,6 +2878,13 @@ func (ec *executionContext) unmarshalInputOrderInput(ctx context.Context, obj an
 				return it, err
 			}
 			it.AccountID = data
+		case "idempotencyKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idempotencyKey"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IdempotencyKey = data
 		case "products":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("products"))
 			data, err := ec.unmarshalNOrderedProductInput2ᚕᚖgithubᚗcomᚋalfredzimmerᚋgoᚑmicroservicesᚋgraphqlᚐOrderedProductInputᚄ(ctx, v)

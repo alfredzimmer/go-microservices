@@ -8,7 +8,7 @@ import (
 )
 
 type Service interface {
-	PostOrder(ctx context.Context, accountId string, products []OrderedProduct) (*Order, error)
+	PostOrder(ctx context.Context, accountId string, products []OrderedProduct, idempotencyKey string) (*Order, error)
 	GetOrdersForAccount(ctx context.Context, accountId string) ([]Order, error)
 }
 
@@ -36,7 +36,7 @@ func NewService(r Repository) Service {
 	return &orderService{r}
 }
 
-func (s orderService) PostOrder(ctx context.Context, accountId string, products []OrderedProduct) (*Order, error) {
+func (s orderService) PostOrder(ctx context.Context, accountId string, products []OrderedProduct, idempotencyKey string) (*Order, error) {
 	o := &Order{
 		Id:         ksuid.New().String(),
 		CreatedAt:  time.Now().UTC(),
@@ -48,11 +48,15 @@ func (s orderService) PostOrder(ctx context.Context, accountId string, products 
 	for _, p := range products {
 		o.TotalPrice += p.Price * float64(p.Quantity)
 	}
-	err := s.repository.PutOrder(ctx, *o)
+	stored, err := s.repository.PutOrder(ctx, *o, idempotencyKey)
 	if err != nil {
 		return nil, err
 	}
-	return o, nil
+	// On an idempotent replay the repository returns the order from the first
+	// call (its id, timestamp and frozen total). Attach this request's fully
+	// populated products so the response shape is identical either way.
+	stored.Products = products
+	return &stored, nil
 }
 
 func (s orderService) GetOrdersForAccount(ctx context.Context, accountId string) ([]Order, error) {

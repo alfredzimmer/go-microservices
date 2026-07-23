@@ -77,6 +77,11 @@ input OrderedProductInput {
 input OrderInput {
     "Id of an existing account; the order service validates it exists."
     accountId: String!
+    """
+    Optional idempotency key. Two createOrder calls carrying the same key
+    place the order once; the second returns the order from the first.
+    """
+    idempotencyKey: String
     products: [OrderedProductInput!]!
 }
 

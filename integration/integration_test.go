@@ -122,15 +122,23 @@ func (f fakeCatalogService) SearchProducts(ctx context.Context, query string, sk
 type inMemoryOrderRepository struct {
 	mu     sync.Mutex
 	orders []order.Order
+	byKey  map[string]order.Order
 }
 
 func (r *inMemoryOrderRepository) Close() {}
 
-func (r *inMemoryOrderRepository) PutOrder(ctx context.Context, o order.Order) error {
+func (r *inMemoryOrderRepository) PutOrder(ctx context.Context, o order.Order, idempotencyKey string) (order.Order, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.byKey == nil {
+		r.byKey = map[string]order.Order{}
+	}
+	if existing, ok := r.byKey[idempotencyKey]; ok {
+		return existing, nil
+	}
 	r.orders = append(r.orders, o)
-	return nil
+	r.byKey[idempotencyKey] = o
+	return o, nil
 }
 
 func (r *inMemoryOrderRepository) GetOrdersForAccount(ctx context.Context, accountId string) ([]order.Order, error) {
@@ -268,7 +276,7 @@ func TestPostOrderPropagatesOneTrace(t *testing.T) {
 	traceID := runInSpan("post-order", func(ctx context.Context) {
 		placed, err = orderClient.PostOrder(ctx, knownAccountID, []order.OrderedProduct{
 			{Id: knownProductID, Quantity: 2},
-		})
+		}, "")
 	})
 
 	if err != nil {
@@ -290,6 +298,30 @@ func TestPostOrderPropagatesOneTrace(t *testing.T) {
 	}
 }
 
+// TestPostOrderIdempotent verifies that two PostOrder calls carrying the same
+// idempotency key place the order once: the second call returns the order
+// created by the first instead of a new one.
+func TestPostOrderIdempotent(t *testing.T) {
+	key := "integration-idempotency-key"
+	products := []order.OrderedProduct{{Id: knownProductID, Quantity: 3}}
+
+	first, err := orderClient.PostOrder(context.Background(), knownAccountID, products, key)
+	if err != nil {
+		t.Fatalf("first PostOrder failed: %v", err)
+	}
+	second, err := orderClient.PostOrder(context.Background(), knownAccountID, products, key)
+	if err != nil {
+		t.Fatalf("second PostOrder (retry) failed: %v", err)
+	}
+
+	if first.Id != second.Id {
+		t.Errorf("retry with the same key should return order id %q, got %q", first.Id, second.Id)
+	}
+	if first.TotalPrice != second.TotalPrice {
+		t.Errorf("retry should return the same total %.2f, got %.2f", first.TotalPrice, second.TotalPrice)
+	}
+}
+
 // TestFailedOrderLogsWithTraceID triggers a failure inside the order
 // service and verifies the error is logged as JSON carrying the trace ID of
 // the request that caused it — the property that lets a log line be looked
@@ -299,7 +331,7 @@ func TestFailedOrderLogsWithTraceID(t *testing.T) {
 	traceID := runInSpan("failing-order", func(ctx context.Context) {
 		_, err = orderClient.PostOrder(ctx, "no-such-account", []order.OrderedProduct{
 			{Id: knownProductID, Quantity: 1},
-		})
+		}, "")
 	})
 
 	if err == nil {
@@ -322,7 +354,7 @@ func TestFailedOrderLogsWithTraceID(t *testing.T) {
 func TestGetOrdersForAccountPropagatesOneTrace(t *testing.T) {
 	var err error
 	traceID := runInSpan("get-orders", func(ctx context.Context) {
-		if _, err = orderClient.PostOrder(ctx, knownAccountID, []order.OrderedProduct{{Id: knownProductID, Quantity: 1}}); err != nil {
+		if _, err = orderClient.PostOrder(ctx, knownAccountID, []order.OrderedProduct{{Id: knownProductID, Quantity: 1}}, ""); err != nil {
 			return
 		}
 		var orders []order.Order

@@ -6,8 +6,10 @@ import (
 
 	"github.com/alfredzimmer/go-microservices/order/pb"
 	"github.com/alfredzimmer/go-microservices/tlsconfig"
+	"github.com/segmentio/ksuid"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 type Client struct {
@@ -32,7 +34,14 @@ func (c *Client) Close() {
 	c.conn.Close()
 }
 
-func (c *Client) PostOrder(ctx context.Context, accountId string, products []OrderedProduct) (*Order, error) {
+func (c *Client) PostOrder(ctx context.Context, accountId string, products []OrderedProduct, idempotencyKey string) (*Order, error) {
+	// A single logical PostOrder reuses one key so a transport-level retry of
+	// this call is deduplicated; callers pass "" to get a generated one.
+	if idempotencyKey == "" {
+		idempotencyKey = ksuid.New().String()
+	}
+	ctx = metadata.AppendToOutgoingContext(ctx, idempotencyKeyHeader, idempotencyKey)
+
 	protoProducts := []*pb.PostOrderRequest_OrderProduct{}
 	for _, p := range products {
 		protoProducts = append(protoProducts, &pb.PostOrderRequest_OrderProduct{

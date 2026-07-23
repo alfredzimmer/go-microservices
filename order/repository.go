@@ -9,7 +9,7 @@ import (
 
 type Repository interface {
 	Close()
-	PutOrder(ctx context.Context, o Order) error
+	PutOrder(ctx context.Context, o Order, idempotencyKey string) (Order, error)
 	GetOrdersForAccount(ctx context.Context, accountId string) ([]Order, error)
 }
 
@@ -33,11 +33,10 @@ func (r *postgresRepository) Close() {
 	r.db.Close()
 }
 
-func (r *postgresRepository) PutOrder(ctx context.Context, o Order) (err error) {
+func (r *postgresRepository) PutOrder(ctx context.Context, o Order, idempotencyKey string) (stored Order, err error) {
 	tx, err := r.db.BeginTx(ctx, nil)
-
 	if err != nil {
-		return err
+		return Order{}, err
 	}
 	defer func() {
 		if err != nil {
@@ -46,30 +45,66 @@ func (r *postgresRepository) PutOrder(ctx context.Context, o Order) (err error) 
 		}
 		err = tx.Commit()
 	}()
-	_, err = tx.ExecContext(
+
+	res, err := tx.ExecContext(
 		ctx,
-		"INSERT INTO orders(id, created_at, account_id, total_price) VALUES ($1, $2, $3, $4)",
+		`INSERT INTO orders(id, created_at, account_id, total_price, idempotency_key)
+		 VALUES ($1, $2, $3, $4, $5)
+		 ON CONFLICT (idempotency_key) DO NOTHING`,
 		o.Id,
 		o.CreatedAt,
 		o.AccountId,
 		o.TotalPrice,
+		idempotencyKey,
 	)
 	if err != nil {
-		return err
+		return Order{}, err
 	}
-	stmt, _ := tx.PrepareContext(ctx, pq.CopyIn("order_products", "order_id", "product_id", "quantity"))
+
+	// No row inserted means this idempotency key was already used: return the
+	// order stored on the first call so a retry never creates a second order.
+	if n, _ := res.RowsAffected(); n == 0 {
+		existing, ferr := getOrderByIdempotencyKey(ctx, tx, idempotencyKey)
+		if ferr != nil {
+			err = ferr
+			return Order{}, err
+		}
+		return existing, nil
+	}
+
+	stmt, err := tx.PrepareContext(ctx, pq.CopyIn("order_products", "order_id", "product_id", "quantity"))
+	if err != nil {
+		return Order{}, err
+	}
 	for _, p := range o.Products {
-		_, err = stmt.ExecContext(ctx, o.Id, p.Id, p.Quantity)
-		if err != nil {
-			return
+		if _, err = stmt.ExecContext(ctx, o.Id, p.Id, p.Quantity); err != nil {
+			return Order{}, err
 		}
 	}
-	_, err = stmt.ExecContext(ctx)
-	if err != nil {
-		return
+	if _, err = stmt.ExecContext(ctx); err != nil {
+		return Order{}, err
 	}
-	stmt.Close()
-	return
+	if err = stmt.Close(); err != nil {
+		return Order{}, err
+	}
+	return o, nil
+}
+
+// getOrderByIdempotencyKey loads the header fields of the order previously
+// stored under key. Products are not read back: callers decorate the order
+// with catalog data from the current request, the same way the read path does.
+func getOrderByIdempotencyKey(ctx context.Context, tx *sql.Tx, key string) (Order, error) {
+	var o Order
+	err := tx.QueryRowContext(
+		ctx,
+		`SELECT id, created_at, account_id, total_price::money::numeric::float8
+		 FROM orders WHERE idempotency_key = $1`,
+		key,
+	).Scan(&o.Id, &o.CreatedAt, &o.AccountId, &o.TotalPrice)
+	if err != nil {
+		return Order{}, err
+	}
+	return o, nil
 }
 
 func (r *postgresRepository) GetOrdersForAccount(ctx context.Context, accountId string) ([]Order, error) {
