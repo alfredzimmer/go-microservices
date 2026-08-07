@@ -43,7 +43,7 @@ func NewElasticRepository(url string) (Repository, error) {
 }
 
 func (r *elasticRepository) Close() {
-	r.Close()
+	r.client.Stop()
 }
 
 func (r *elasticRepository) PutProduct(ctx context.Context, p Product) error {
